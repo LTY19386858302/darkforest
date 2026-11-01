@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "darkforest"
+version = "0.0.1"
+description = "三体纪元·黑暗森林 —— Python 复刻版"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+authors = [{ name = "DarkForest Team" }]
+
+# 运行时依赖：只有两个。规则层零依赖，UI 层才需要 pygame。
+dependencies = [
+    "pygame-ce>=2.5",
+    "requests>=2.31",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-benchmark",
+    "ruff>=0.6",
+    "mypy>=1.10",
+    "pyinstaller>=6.6",
+]
+
+[project.scripts]
+darkforest = "darkforest.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["darkforest*"]
+
+[tool.setuptools.package-data]
+darkforest = ["assets/**/*"]
+
+# ---------- 代码质量 ----------
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+ignore = ["E501"]          # 中文注释经常超长，放过
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B011"]
+
+# ---------- 类型检查：只对规则层严格 ----------
+# UI 和 net 因为大量调用第三方库，先放宽，避免第 0 周就卡住。
+[tool.mypy]
+python_version = "3.11"
+warn_unused_configs = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["darkforest.ui.*", "darkforest.net.*"]
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

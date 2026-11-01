@@ -1,0 +1,53 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+    paths: ["darkforest/**", ".github/workflows/ci.yml"]
+  pull_request:
+    paths: ["darkforest/**"]
+
+defaults:
+  run:
+    working-directory: darkforest
+
+jobs:
+  check:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: 安装（只装开发依赖，不装 pygame）
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff mypy
+
+      - name: 代码风格
+        run: ruff check .
+
+      - name: 类型检查（只对规则层严格）
+        run: mypy darkforest/core darkforest/ai
+        continue-on-error: true
+
+      - name: 单元测试（零依赖）
+        run: python -m unittest discover -s tests -v
+
+      - name: 无头自检
+        run: python -m darkforest --smoke
+
+      - name: 架构守卫（规则层不许碰 pygame）
+        shell: pwsh
+        run: |
+          $hits = Select-String -Path darkforest/core/*.py,darkforest/ai/*.py -Pattern '^\s*import pygame' -ErrorAction SilentlyContinue
+          if ($hits) { $hits; exit 1 }
+          Write-Host "OK: core/ai 未依赖 pygame"
